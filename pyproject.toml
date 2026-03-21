@@ -1,0 +1,44 @@
+[project]
+name = "docklet"
+version = "0.1.0"
+description = "A minimalist Docker clone for learning container internals"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.scripts]
+docklet = "docklet.cli:main"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "ANN",  # flake8-annotations
+    "RET",  # flake8-return
+    "SIM",  # flake8-simplify
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["docklet"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
