@@ -35,6 +35,8 @@ Key design decisions:
 - **Commit after every green module.** After a module passes tests + mypy + ruff, commit it immediately before starting the next module. Do not batch multiple modules into one commit. Each commit must compile and pass all tests independently.
 - **One logical change per commit.** If the commit message needs "and", split it.
 - **Commit message format:** `<type>: <what and why>` (types: feat, fix, refactor, test, chore, docs).
+- **Push after every commit.** This is trunk-based development — work on main, push immediately. Do not accumulate local commits.
+- **Run dora-review after each push.** Use the `dora-skills:dora-review` agent to review the changes before moving to the next module.
 
 ## DORA Skills Applied
 
