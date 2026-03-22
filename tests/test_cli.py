@@ -2,18 +2,12 @@
 
 from __future__ import annotations
 
-import sys
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Inject a mock container module before importing cli, since container.py
-# is being built concurrently on a separate branch and doesn't exist yet.
-_mock_container_module = MagicMock()
-sys.modules.setdefault("docklet.container", _mock_container_module)
-
-from docklet.cli import _parse_image_tag, main  # noqa: E402
+from docklet.cli import _parse_image_tag, main
 
 
 class TestParseImageTag:
