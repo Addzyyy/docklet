@@ -11,7 +11,7 @@ CONTAINERS_DIR: Path = DOCKLET_ROOT / "containers"
 IMAGES_DIR: Path = DOCKLET_ROOT / "images"
 LAYERS_DIR: Path = DOCKLET_ROOT / "layers"
 
-# cgroups v2
+# Cgroup v2
 CGROUP_ROOT: Path = Path("/sys/fs/cgroup/docklet")
 
 # Networking
@@ -19,7 +19,7 @@ NETWORK_BRIDGE: str = "docklet0"
 SUBNET: str = "10.0.100.0/24"
 BRIDGE_IP: str = "10.0.100.1"
 
-# Syscall numbers (x86-64)
+# Syscall numbers (x86-64 Linux)
 SYS_PIVOT_ROOT: int = 155
 SYS_MOUNT: int = 165
 SYS_UMOUNT2: int = 166
