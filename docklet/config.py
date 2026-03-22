@@ -1,12 +1,14 @@
 """Paths, constants, and syscall numbers for docklet.
 
 No logic — just data. Single source of truth for all configuration.
+Paths and networking values are overridable via environment variables.
 """
 
+import os
 from pathlib import Path
 
-# Filesystem paths
-DOCKLET_ROOT: Path = Path("/var/lib/docklet")
+# Filesystem paths (overridable via DOCKLET_ROOT env var)
+DOCKLET_ROOT: Path = Path(os.environ.get("DOCKLET_ROOT", "/var/lib/docklet"))
 CONTAINERS_DIR: Path = DOCKLET_ROOT / "containers"
 IMAGES_DIR: Path = DOCKLET_ROOT / "images"
 LAYERS_DIR: Path = DOCKLET_ROOT / "layers"
@@ -14,10 +16,10 @@ LAYERS_DIR: Path = DOCKLET_ROOT / "layers"
 # Cgroup v2
 CGROUP_ROOT: Path = Path("/sys/fs/cgroup/docklet")
 
-# Networking
-NETWORK_BRIDGE: str = "docklet0"
-SUBNET: str = "10.0.100.0/24"
-BRIDGE_IP: str = "10.0.100.1"
+# Networking (overridable via env vars for alternative network layouts)
+NETWORK_BRIDGE: str = os.environ.get("DOCKLET_BRIDGE", "docklet0")
+SUBNET: str = os.environ.get("DOCKLET_SUBNET", "10.0.100.0/24")
+BRIDGE_IP: str = os.environ.get("DOCKLET_BRIDGE_IP", "10.0.100.1")
 
 # Syscall numbers (x86-64 Linux)
 SYS_PIVOT_ROOT: int = 155

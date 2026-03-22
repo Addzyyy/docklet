@@ -1,7 +1,10 @@
 """Tests for docklet.config — paths, constants, and syscall numbers."""
 
+import importlib
 from pathlib import Path
+from unittest.mock import patch
 
+import docklet.config as config_module
 from docklet.config import (
     BRIDGE_IP,
     CGROUP_ROOT,
@@ -90,3 +93,34 @@ class TestNamespaceFlags:
 
     def test_clone_newnet(self) -> None:
         assert CLONE_NEWNET == 0x40000000
+
+
+class TestEnvironmentOverrides:
+    """Config values for paths and networking can be overridden via env vars."""
+
+    def test_docklet_root_from_env(self) -> None:
+        with patch.dict("os.environ", {"DOCKLET_ROOT": "/tmp/test-docklet"}):
+            importlib.reload(config_module)
+            assert Path("/tmp/test-docklet") == config_module.DOCKLET_ROOT
+            assert Path("/tmp/test-docklet/containers") == config_module.CONTAINERS_DIR
+            assert Path("/tmp/test-docklet/images") == config_module.IMAGES_DIR
+            assert Path("/tmp/test-docklet/layers") == config_module.LAYERS_DIR
+        importlib.reload(config_module)
+
+    def test_bridge_name_from_env(self) -> None:
+        with patch.dict("os.environ", {"DOCKLET_BRIDGE": "custom-br0"}):
+            importlib.reload(config_module)
+            assert config_module.NETWORK_BRIDGE == "custom-br0"
+        importlib.reload(config_module)
+
+    def test_subnet_from_env(self) -> None:
+        with patch.dict("os.environ", {"DOCKLET_SUBNET": "172.16.0.0/16"}):
+            importlib.reload(config_module)
+            assert config_module.SUBNET == "172.16.0.0/16"
+        importlib.reload(config_module)
+
+    def test_bridge_ip_from_env(self) -> None:
+        with patch.dict("os.environ", {"DOCKLET_BRIDGE_IP": "172.16.0.1"}):
+            importlib.reload(config_module)
+            assert config_module.BRIDGE_IP == "172.16.0.1"
+        importlib.reload(config_module)
