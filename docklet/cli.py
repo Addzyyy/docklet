@@ -7,17 +7,11 @@ docker-like command interface. Requires root privileges to run.
 from __future__ import annotations
 
 import argparse
-import importlib
 import os
 import sys
-import types
 from typing import Any
 
-from docklet import image, registry
-
-# container.py is built concurrently on another branch and may not exist yet.
-# Use importlib so mypy doesn't statically resolve the missing attribute.
-container: types.ModuleType = importlib.import_module("docklet.container")
+from docklet import container, image, registry
 
 
 def _parse_image_tag(image_str: str) -> tuple[str, str]:
