@@ -43,7 +43,11 @@ def _syscall_mount(
     )
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"mount failed: {errno}")
+        raise OSError(
+            errno,
+            f"mount(source={source!r}, target={target!r}, "
+            f"fstype={fstype!r}) failed: errno={errno}",
+        )
 
 
 def _syscall_umount2(target: bytes, flags: int) -> None:
@@ -51,7 +55,9 @@ def _syscall_umount2(target: bytes, flags: int) -> None:
     ret: int = _libc.syscall(SYS_UMOUNT2, target, flags)
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"umount2 failed: {errno}")
+        raise OSError(
+            errno, f"umount2(target={target!r}, flags=0x{flags:x}) failed: errno={errno}"
+        )
 
 
 def setup_overlay(container_id: str, image_layers: list[str]) -> str:
@@ -115,7 +121,9 @@ def pivot_root(new_root: str) -> None:
     ret: int = _libc.syscall(SYS_PIVOT_ROOT, b".", b".")
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"pivot_root failed: {errno}")
+        raise OSError(
+            errno, f"pivot_root(new_root={new_root!r}) failed: errno={errno}"
+        )
 
     # Unmount old root with MNT_DETACH
     _syscall_umount2(b".", _MNT_DETACH)

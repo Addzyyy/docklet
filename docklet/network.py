@@ -7,10 +7,14 @@ No external dependencies — stdlib only.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
 from docklet.config import BRIDGE_IP, CONTAINERS_DIR, NETWORK_BRIDGE, SUBNET
+
+# Default timeout (seconds) for subprocess commands
+_CMD_TIMEOUT: int = int(os.environ.get("DOCKLET_CMD_TIMEOUT", "30"))
 
 
 def setup_bridge() -> None:
@@ -25,6 +29,7 @@ def setup_bridge() -> None:
         subprocess.run(
             ["ip", "link", "show", NETWORK_BRIDGE],
             check=True,
+            timeout=_CMD_TIMEOUT,
         )
     except subprocess.CalledProcessError:
         # Bridge doesn't exist — create it
@@ -32,14 +37,17 @@ def setup_bridge() -> None:
         subprocess.run(
             ["ip", "link", "add", NETWORK_BRIDGE, "type", "bridge"],
             check=True,
+            timeout=_CMD_TIMEOUT,
         )
         subprocess.run(
             ["ip", "addr", "add", f"{BRIDGE_IP}/{subnet_prefix}", "dev", NETWORK_BRIDGE],
             check=True,
+            timeout=_CMD_TIMEOUT,
         )
         subprocess.run(
             ["ip", "link", "set", NETWORK_BRIDGE, "up"],
             check=True,
+            timeout=_CMD_TIMEOUT,
         )
 
     # Enable IP forwarding
@@ -56,6 +64,7 @@ def setup_bridge() -> None:
             "-j", "MASQUERADE",
         ],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
 
@@ -112,24 +121,28 @@ def setup_container_net(container_id: str, pid: int) -> str:
     subprocess.run(
         ["ip", "link", "add", veth_host, "type", "veth", "peer", "name", "eth0"],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 2. Attach host end to bridge
     subprocess.run(
         ["ip", "link", "set", veth_host, "master", NETWORK_BRIDGE],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 3. Bring host end up
     subprocess.run(
         ["ip", "link", "set", veth_host, "up"],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 4. Move container end into container's network namespace
     subprocess.run(
         ["ip", "link", "set", "eth0", "netns", str(pid)],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 5. Assign IP inside container
@@ -139,6 +152,7 @@ def setup_container_net(container_id: str, pid: int) -> str:
             "ip", "addr", "add", f"{ip}/{subnet_prefix}", "dev", "eth0",
         ],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 6. Bring eth0 up inside container
@@ -148,6 +162,7 @@ def setup_container_net(container_id: str, pid: int) -> str:
             "ip", "link", "set", "eth0", "up",
         ],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     # 7. Set default route inside container
@@ -157,6 +172,7 @@ def setup_container_net(container_id: str, pid: int) -> str:
             "ip", "route", "add", "default", "via", BRIDGE_IP,
         ],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
 
     return ip
@@ -168,4 +184,5 @@ def cleanup_net(container_id: str) -> None:
     subprocess.run(
         ["ip", "link", "del", veth_host],
         check=True,
+        timeout=_CMD_TIMEOUT,
     )
