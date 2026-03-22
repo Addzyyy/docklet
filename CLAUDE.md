@@ -6,11 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Docklet is a minimalist Docker clone written in Python for learning Linux container internals. It uses real kernel primitives (namespaces, cgroups v2, overlayfs) via ctypes with zero external dependencies (pure stdlib). See `SPEC.md` for the full technical specification.
 
-## Build & Run
+## Build & Test Commands
 
 ```bash
-pip install -e .           # Install in dev mode
-sudo docklet run alpine /bin/sh   # Run a container (requires root + CAP_SYS_ADMIN, CAP_NET_ADMIN)
+pip install -e .                        # Install in dev mode
+python -m pytest tests/                 # Run all tests
+python -m pytest tests/test_config.py   # Run a single test file
+python -m pytest tests/ -k "test_name"  # Run a specific test by name
+python -m mypy docklet/                 # Type check (strict mode enabled)
+python -m ruff check .                  # Lint
+python -m ruff check . --fix            # Lint with auto-fix
+```
+
+To run the actual container runtime (requires privileged host, not available in dev container):
+```bash
+sudo docklet run alpine /bin/sh
 ```
 
 ## Architecture
@@ -23,35 +33,76 @@ Key design decisions:
 - **`subprocess.run(["ip", ...])`** for networking — netlink binary protocol isn't worth the complexity for educational code
 - **`urllib.request`** for Docker Hub registry API — no requests dependency
 
+Modules are loosely coupled: `config.py`, `namespaces.py`, `cgroups.py`, `filesystem.py`, `network.py`, `registry.py`, and `image.py` are independent. Only `container.py` orchestrates them.
+
+## Build Order
+
+Modules are built bottom-up. Each phase must pass tests + mypy + ruff before proceeding.
+
+| Phase | Modules | Root required? |
+|-------|---------|----------------|
+| 1 | config.py | No |
+| 2 | registry.py, image.py | No |
+| 3 | namespaces.py, cgroups.py, filesystem.py | To test |
+| 4 | network.py | To test |
+| 5 | container.py | To test |
+| 6 | cli.py, pyproject.toml | No |
+
 ## Constraints
 
 - Must remain **zero-dependency** (stdlib only)
 - Requires **Linux x86-64** — syscall numbers are architecture-specific
-- Requires **root** with `CAP_SYS_ADMIN` and `CAP_NET_ADMIN` to actually run containers
-- The current dev environment (unprivileged Docker container) cannot run containers — code must be tested on a privileged host
+- Requires **root** with `CAP_SYS_ADMIN` and `CAP_NET_ADMIN` to run containers
+- The current dev environment (unprivileged Docker container) cannot run containers — unit tests must mock kernel interfaces
+
+## Tool Configuration
+
+- **mypy**: strict mode, Python 3.10 target, `disallow_untyped_defs`
+- **ruff**: Python 3.10 target, line length 100, enables pycodestyle/pyflakes/isort/bugbear/pyupgrade/annotations/return/simplify
+- **pytest**: test discovery in `tests/`
 
 ## Workflow Rules
 
-- **Commit after every green module.** After a module passes tests + mypy + ruff, commit it immediately before starting the next module. Do not batch multiple modules into one commit. Each commit must compile and pass all tests independently.
+- **Feature branches only.** Never commit directly to main. Create a short-lived branch (e.g., `feat/config-module`) before the first commit.
+- **TDD.** Write the failing test before the implementation.
+- **Commit after every green module.** After a module passes tests + mypy + ruff, commit immediately. Do not batch multiple modules into one commit.
 - **One logical change per commit.** If the commit message needs "and", split it.
 - **Commit message format:** `<type>: <what and why>` (types: feat, fix, refactor, test, chore, docs).
-- **Push after every commit.** This is trunk-based development — work on main, push immediately. Do not accumulate local commits.
-- **Run dora-review after each push.** Use the `dora-skills:dora-review` agent to review the changes before moving to the next module.
+- **Push after every commit.** Do not accumulate local commits.
+- **Run dora-review after each push.** Use the `dora-skills:dora-review` agent before moving to the next module.
+- **Merge to main via PR** when the work is ready.
 
-## DORA Skills Applied
+## DORA Skills
 
-This project uses DORA engineering skills throughout development:
+This project uses DORA engineering skills (available as `dora-skills:*`). Load each skill **at the moment it's relevant**, not all at once.
 
-| Skill | Application |
+### Startup
+- Load `dora-skills:dora-overview` at the start of any coding session to route to the right practices.
+- Run `dora-skills:dora-health-check` agent for a baseline score before starting work.
+
+### During development — load the skill that matches what you're about to do
+
+| When you are... | Load this skill |
 |---|---|
-| **loose-coupling** | Modules (namespaces, cgroups, filesystem, network, registry, image) are independent; only `container.py` orchestrates them |
-| **configuration-as-code** | All paths, syscall numbers, and tunables live in `config.py` — single source of truth |
-| **type-safety-and-linting** | Type hints throughout, mypy/ruff configured |
-| **test-driven-development** | Tests written before implementation for each module |
-| **structured-logging-and-tracing** | Structured logging with container ID correlation across lifecycle operations |
-| **observability-aware-coding** | Key operations (pull, start, exec, stop) instrumented with timing and status |
-| **dependency-management** | Zero external dependencies enforced — stdlib only |
-| **small-incremental-commits** | One commit per module, building bottom-up |
-| **rollback-friendly-design** | Container teardown reverses setup steps; partial failures clean up already-created resources |
-| **contract-testing** | Registry API responses validated against expected schemas |
-| **feature-flags** | Runtime capability detection — graceful behavior when kernel features are unavailable |
+| Writing any new code | `dora-skills:test-driven-development` — failing test must exist first |
+| Designing module boundaries or interfaces | `dora-skills:loose-coupling` |
+| Adding paths, constants, env vars, or tunables | `dora-skills:configuration-as-code` |
+| Writing type hints, fixing mypy/ruff errors | `dora-skills:type-safety-and-linting` |
+| Adding logging, print, or debug output | `dora-skills:structured-logging-and-tracing` |
+| Adding metrics, health checks, or timing | `dora-skills:observability-aware-coding` |
+| Changing API endpoints or response shapes | `dora-skills:api-versioning` |
+| Changing API schemas or service contracts | `dora-skills:contract-testing` |
+| Writing database/schema migrations | `dora-skills:backward-compatible-migrations` |
+| Adding packages or updating dependencies | `dora-skills:dependency-management` |
+| Shipping a new feature or risky change | `dora-skills:feature-flags` |
+| Writing deployment/teardown/cleanup logic | `dora-skills:rollback-friendly-design` |
+| Creating a branch or merging | `dora-skills:trunk-based-development` |
+| Staging or committing changes | `dora-skills:small-incremental-commits` |
+| Creating or reviewing a PR | `dora-skills:small-pull-requests` |
+| Reviewing code or self-reviewing before PR | `dora-skills:code-review-discipline` |
+| Unsure about requirements or hitting ambiguity | `dora-skills:stop-and-clarify` |
+
+### After completing work
+- Run `dora-skills:dora-review` agent after each push to review changes.
+- Run `dora-skills:dora-health-check` agent to compare against baseline.
+- Run `dora-skills:dora-improve` agent if any metric scored low.
