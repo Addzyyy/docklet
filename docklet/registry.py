@@ -9,16 +9,20 @@ from __future__ import annotations
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from typing import Any
 
 from docklet.config import IMAGES_DIR, LAYERS_DIR
 from docklet.image import extract_layer
 
-_AUTH_URL = "https://auth.docker.io/token"
-_REGISTRY_URL = "https://registry-1.docker.io/v2"
+_AUTH_URL = os.environ.get("DOCKLET_AUTH_URL", "https://auth.docker.io/token")
+_REGISTRY_URL = os.environ.get("DOCKLET_REGISTRY_URL", "https://registry-1.docker.io/v2")
 _MANIFEST_V2_TYPE = "application/vnd.docker.distribution.manifest.v2+json"
 _MANIFEST_LIST_TYPE = "application/vnd.docker.distribution.manifest.list.v2+json"
+
+# Default timeout (seconds) for registry HTTP requests
+_REQUEST_TIMEOUT: int = int(os.environ.get("DOCKLET_REGISTRY_TIMEOUT", "30"))
 
 
 def _normalize_image(image: str) -> str:
@@ -32,8 +36,12 @@ def _get_auth_token(image: str) -> str:
     """Request a bearer token from auth.docker.io scoped to pull the image."""
     url = f"{_AUTH_URL}?service=registry.docker.io&scope=repository:{image}:pull"
     req = urllib.request.Request(url)
-    with urllib.request.urlopen(req) as resp:
-        data: dict[str, Any] = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT) as resp:
+            data: dict[str, Any] = json.loads(resp.read())
+    except urllib.error.URLError as exc:
+        msg = f"Auth token request failed for image={image}: {exc}"
+        raise RuntimeError(msg) from exc
     token: str = data["token"]
     return token
 
@@ -49,8 +57,12 @@ def _get_manifest(image: str, tag: str, token: str) -> dict[str, Any]:
         "Authorization": f"Bearer {token}",
         "Accept": accept,
     })
-    with urllib.request.urlopen(req) as resp:
-        data: dict[str, Any] = json.loads(resp.read())
+    try:
+        with urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT) as resp:
+            data: dict[str, Any] = json.loads(resp.read())
+    except urllib.error.URLError as exc:
+        msg = f"Manifest fetch failed for image={image} tag={tag}: {exc}"
+        raise RuntimeError(msg) from exc
 
     # If this is a manifest list, find the amd64/linux entry and fetch that manifest
     media_type = data.get("mediaType", "")
@@ -81,7 +93,12 @@ def _pull_layer(image: str, digest: str, token: str, dest: str) -> None:
     req = urllib.request.Request(url, headers={
         "Authorization": f"Bearer {token}",
     })
-    with urllib.request.urlopen(req) as resp:
+    try:
+        resp = urllib.request.urlopen(req, timeout=_REQUEST_TIMEOUT)
+    except urllib.error.URLError as exc:
+        msg = f"Layer download failed for image={image} digest={digest}: {exc}"
+        raise RuntimeError(msg) from exc
+    with resp:
         total = int(resp.headers.get("Content-Length", 0))
         downloaded = 0
         with open(dest, "wb") as f:

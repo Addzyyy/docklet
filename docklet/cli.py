@@ -165,3 +165,6 @@ def main(argv: list[str] | None = None) -> None:
         handler(args)
     except KeyboardInterrupt:
         sys.exit(130)
+    except (RuntimeError, OSError, FileNotFoundError) as exc:
+        sys.stderr.write(f"docklet: error: {exc}\n")
+        sys.exit(1)

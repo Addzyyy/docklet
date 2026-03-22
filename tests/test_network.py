@@ -28,14 +28,17 @@ class TestSetupBridge:
         assert mock_run.call_args_list[1] == call(
             ["ip", "link", "add", "docklet0", "type", "bridge"],
             check=True,
+            timeout=30,
         )
         assert mock_run.call_args_list[2] == call(
             ["ip", "addr", "add", "10.0.100.1/24", "dev", "docklet0"],
             check=True,
+            timeout=30,
         )
         assert mock_run.call_args_list[3] == call(
             ["ip", "link", "set", "docklet0", "up"],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network.subprocess.run")
@@ -77,6 +80,7 @@ class TestSetupBridge:
                 "-j", "MASQUERADE",
             ],
             check=True,
+            timeout=30,
         )
 
 
@@ -155,6 +159,7 @@ class TestSetupContainerNet:
                 "peer", "name", "eth0",
             ],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -168,6 +173,7 @@ class TestSetupContainerNet:
         assert attach_call == call(
             ["ip", "link", "set", "veth-abcdef1", "master", "docklet0"],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -179,6 +185,7 @@ class TestSetupContainerNet:
         assert up_call == call(
             ["ip", "link", "set", "veth-abcdef1", "up"],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -192,6 +199,7 @@ class TestSetupContainerNet:
         assert move_call == call(
             ["ip", "link", "set", "eth0", "netns", "42"],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -208,6 +216,7 @@ class TestSetupContainerNet:
                 "ip", "addr", "add", "10.0.100.2/24", "dev", "eth0",
             ],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -224,6 +233,7 @@ class TestSetupContainerNet:
                 "ip", "link", "set", "eth0", "up",
             ],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.2")
@@ -240,6 +250,7 @@ class TestSetupContainerNet:
                 "ip", "route", "add", "default", "via", "10.0.100.1",
             ],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network._allocate_ip", return_value="10.0.100.5")
@@ -267,6 +278,7 @@ class TestCleanupNet:
         mock_run.assert_called_once_with(
             ["ip", "link", "del", "veth-abcdef1"],
             check=True,
+            timeout=30,
         )
 
     @patch("docklet.network.subprocess.run")
@@ -276,4 +288,5 @@ class TestCleanupNet:
         mock_run.assert_called_once_with(
             ["ip", "link", "del", "veth-xyz9876"],
             check=True,
+            timeout=30,
         )

@@ -14,7 +14,7 @@ def unshare(flags: int) -> None:
     ret: int = _libc.unshare(flags)
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"unshare failed: {errno}")
+        raise OSError(errno, f"unshare(flags=0x{flags:08x}) failed: errno={errno}")
 
 
 def setns(fd: int, nstype: int) -> None:
@@ -22,7 +22,7 @@ def setns(fd: int, nstype: int) -> None:
     ret: int = _libc.setns(fd, nstype)
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"setns failed: {errno}")
+        raise OSError(errno, f"setns(fd={fd}, nstype=0x{nstype:08x}) failed: errno={errno}")
 
 
 def sethostname(name: str) -> None:
@@ -31,4 +31,4 @@ def sethostname(name: str) -> None:
     ret: int = _libc.sethostname(name_bytes, len(name_bytes))
     if ret == -1:
         errno = ctypes.get_errno()
-        raise OSError(errno, f"sethostname failed: {errno}")
+        raise OSError(errno, f"sethostname(name={name!r}) failed: errno={errno}")
